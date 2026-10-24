@@ -316,7 +316,7 @@ class ThreadPool {
       if ((*tsk.launcher->flambda)(0, penv, cdata) == 0) {
         tsk.launcher->SignalJobFinish();
       } else {
-        tsk.launcher->SignalJobError(tsk.task_id);
+        tsk.launcher->SignalJobError(0);
       }
     }
     int res = launcher->WaitForJobs();
