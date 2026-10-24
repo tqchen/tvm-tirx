@@ -26,6 +26,7 @@ on:
     branches:
       - main
       - tirx-standalone-root  # Temporary standalone branch validation.
+      - msvc-warning-audit  # Windows warning investigation.
   pull_request:
     branches:
       - main
@@ -96,6 +97,7 @@ jobs:
   Windows:
     if: >-
       ${{ github.repository == 'apache/tvm-tirx' || github.repository == 'apache/tvm' ||
+          (github.repository == 'tqchen/tvm-tirx' && github.ref == 'refs/heads/msvc-warning-audit') ||
           (github.repository == 'tqchen/tvm-dev' && github.ref == 'refs/heads/tirx-standalone-root') }}
     runs-on: windows-latest
     steps:
