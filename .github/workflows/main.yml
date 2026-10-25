@@ -24,7 +24,7 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - msvc-warning-default-ci
       - tirx-standalone-root  # Temporary standalone branch validation.
   pull_request:
     branches:
@@ -91,12 +91,13 @@ jobs:
 
   Windows:
     if: >-
-      ${{ github.repository == 'apache/tvm-tirx' || github.repository == 'apache/tvm' ||
+      ${{ (github.repository == 'tqchen/tvm-tirx' && github.ref == 'refs/heads/msvc-warning-default-ci') || github.repository == 'apache/tvm-tirx' || github.repository == 'apache/tvm' ||
           (github.repository == 'tqchen/tvm-dev' && github.ref == 'refs/heads/tirx-standalone-root') }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6.0.2
         with:
+          ref: e5e55059e88c55c1cda5a39e4fddeaef6aae61e0
           submodules: 'recursive'
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
