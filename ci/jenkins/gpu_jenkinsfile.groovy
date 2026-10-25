@@ -79,10 +79,10 @@ parallel(
     stage('Docs') {
       ci.with_node(instance: 'CPU-SPOT', retry_instance: 'CPU',
         name: 'Docs', folder: 'tvm/tirx-docs', variables: ['PLATFORM=gpu']) {
-        ci.docker_init(images.ci_gpu_tools)
+        ci.docker_init(images.ci_gpu)
         ci.download_artifacts('gpu')
         sh(
-          script: "${docker_run} --no-gpu ${images.ci_gpu_tools} ./tests/scripts/task_python_docs.sh",
+          script: "${docker_run} --no-gpu ${images.ci_gpu} ./tests/scripts/task_python_docs.sh",
           label: 'Build TIRx API documentation',
         )
         ci.upload_artifacts('docs', '--path docs.tgz')
