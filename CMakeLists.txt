@@ -62,7 +62,7 @@ tvm_tirx_option(TVM_TIRX_USE_OPENCL_EXTN_QCOM BOOL OFF "Enable Qualcomm OpenCL e
 
 # Vulkan
 tvm_tirx_option(TVM_TIRX_USE_VULKAN STRING OFF "Build with Vulkan (OFF, ON, or SDK path)")
-tvm_tirx_option(TVM_TIRX_USE_KHRONOS_SPIRV STRING OFF "Use Khronos SPIR-V tools (OFF or install path)")
+tvm_tirx_option(TVM_TIRX_USE_KHRONOS_SPIRV STRING OFF "SPIR-V tools installation prefix (OFF for automatic discovery)")
 tvm_tirx_option(TVM_TIRX_USE_SPIRV_KHR_INTEGER_DOT_PRODUCT BOOL OFF "Enable SPIR-V integer dot product")
 
 # ROCm
@@ -219,6 +219,7 @@ include(cmake/modules/OpenMP.cmake)
 # contributions are collected before the compiler object target is created.
 include(cmake/modules/CUDA.cmake)
 include(cmake/modules/OpenCL.cmake)
+include(cmake/modules/SPIRV.cmake)
 include(cmake/modules/Vulkan.cmake)
 include(cmake/modules/Metal.cmake)
 include(cmake/modules/ROCM.cmake)
@@ -228,7 +229,7 @@ include(cmake/modules/Git.cmake)
 # ######### Target: `tvm_tirx_compiler` ##########
 
 add_library(tvm_tirx_compiler_objs OBJECT ${COMPILER_SRCS})
-target_link_libraries(tvm_tirx_compiler_objs PUBLIC tvm_tirx_header)
+target_link_libraries(tvm_tirx_compiler_objs PUBLIC tvm_tirx_header PRIVATE tvm_spirv_header)
 if(TARGET tvm_llvm_header)
   target_link_libraries(tvm_tirx_compiler_objs PRIVATE tvm_llvm_header)
 endif()

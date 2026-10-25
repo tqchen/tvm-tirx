@@ -15,19 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import pytest
-
 import tvm_tirx
 import tvm_tirx.testing
 from tvm_tirx.script import ir as I
 from tvm_tirx.script import tirx as T
-from tvm_tirx.testing import env
 
 
-@pytest.mark.gpu
-@pytest.mark.skipif(not env.has_vulkan(), reason="need vulkan")
 def test_export_load_with_fallback(monkeypatch, tmp_path):
-    """Force the codegen wrapper into the fallback branch, then export."""
+    """Compile and export SPIR-V without requiring a Vulkan device or runtime."""
     n = 1024
 
     @I.ir_module
@@ -42,6 +37,7 @@ def test_export_load_with_fallback(monkeypatch, tmp_path):
     monkeypatch.setenv("TVM_TIRX_COMPILE_FORCE_FALLBACK", "1")
     host_lib = tvm_tirx.tirx.compile(Module, target="vulkan")
     monkeypatch.delenv("TVM_TIRX_COMPILE_FORCE_FALLBACK")
+    assert "OpEntryPoint GLCompute" in host_lib.mod.imports[0].inspect_source()
 
     lib_path = str(tmp_path / "lib.so")
     host_lib.export_library(lib_path)

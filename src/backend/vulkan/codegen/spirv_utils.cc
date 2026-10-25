@@ -28,7 +28,7 @@
 #include <tvm/support/env.h>
 
 #if TVM_ENABLE_SPIRV
-#include <libspirv.h>
+#include <spirv-tools/libspirv.h>
 
 #include "codegen_spirv.h"
 #endif
