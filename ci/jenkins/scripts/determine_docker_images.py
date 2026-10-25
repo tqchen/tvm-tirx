@@ -137,8 +137,8 @@ if __name__ == "__main__":
     name_dir.mkdir(exist_ok=True)
     images_to_use = {}
     for filename, spec in images.items():
-        if spec.startswith(TVM_CI_ECR):
-            logging.info(f"{spec} is from ECR")
+        if spec.startswith((TVM_CI_ECR, "quay.io/")):
+            logging.info(f"{spec} uses its explicit registry")
             images_to_use[filename] = spec
         elif image_exists(spec):
             logging.info(f"{spec} found in tlcpack")

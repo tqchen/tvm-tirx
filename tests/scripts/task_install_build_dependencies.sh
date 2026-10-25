@@ -18,6 +18,13 @@
 
 set -euxo pipefail
 
+# Use the bundled interpreter/toolchain in stock manylinux images.
+if [ -d /opt/python/cp310-cp310 ]; then
+    export PATH="/opt/python/cp310-cp310/bin:/opt/rh/gcc-toolset-14/root/usr/bin:/usr/local/cuda/bin:$HOME/.local/bin:$PATH"
+    export CC=gcc CXX=g++
+    python3 -m pip install --user uv
+fi
+
 rm -rf dist
 unset PYTHONPATH TVM_LIBRARY_PATH TVM_FFI_LIBRARY_PATH TVM_TIRX_LIBRARY_PATH
 export PYTHONNOUSERSITE=1

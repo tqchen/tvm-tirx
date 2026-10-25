@@ -22,6 +22,8 @@ set -euxo pipefail
 # Keep these libraries separate from the published GPU wheel artifacts.
 unset PYTHONPATH TVM_LIBRARY_PATH TVM_FFI_LIBRARY_PATH TVM_TIRX_LIBRARY_PATH
 export PYTHONNOUSERSITE=1
+# This native-toolchain image has a different interpreter from the CUDA build.
+uv venv --clear --python "$(command -v python3)"
 source .venv/bin/activate
 uv sync --only-group build
 uv pip install --no-deps --offline --reinstall dist/apache_tvm_ffi-*.whl

@@ -19,7 +19,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 // ------ Config ------
 // Keep image names aligned with docker-images.ini. Tags are resolved in prepare.
-image_platforms = [ci_arm: 'ARM', ci_cpu: 'CPU', ci_gpu: 'GPU']
+image_platforms = [ci_arm: 'ARM', ci_cpu: 'CPU', ci_gpu: 'GPU', ci_gpu_tools: 'GPU']
 // Resolve Hub inputs through the caller account ECR cache; false keeps public names.
 enable_docker_hub_cache = true
 max_time = 180

@@ -34,6 +34,7 @@ stage('Build') {
     withEnv(ci.build_environment()) {
       sh(
         script: """${docker_run} --no-gpu ${images.ci_gpu} bash -euo pipefail -c '
+          sudo dnf -y install cuda-driver-devel-13-1
           source ./tests/scripts/task_install_build_dependencies.sh
           ./tests/scripts/task_build_gpu.sh
         '""",
@@ -44,9 +45,10 @@ stage('Build') {
 
     // Check the compiler-only GPU configuration after publishing the test build.
     sh 'rm -rf build'
+    ci.docker_init(images.ci_gpu_tools)
     withEnv(ci.build_environment()) {
       sh(
-        script: "${docker_run} --no-gpu ${images.ci_gpu} ./tests/scripts/task_build_gpu_other.sh",
+        script: "${docker_run} --no-gpu ${images.ci_gpu_tools} ./tests/scripts/task_build_gpu_other.sh",
         label: 'Build gpu_other',
       )
     }
@@ -75,10 +77,10 @@ parallel(
     stage('Docs') {
       ci.with_node(instance: 'CPU-SPOT', retry_instance: 'CPU',
         name: 'Docs', folder: 'tvm/tirx-docs', variables: ['PLATFORM=gpu']) {
-        ci.docker_init(images.ci_gpu)
+        ci.docker_init(images.ci_gpu_tools)
         ci.download_artifacts('gpu')
         sh(
-          script: "${docker_run} --no-gpu ${images.ci_gpu} ./tests/scripts/task_python_docs.sh",
+          script: "${docker_run} --no-gpu ${images.ci_gpu_tools} ./tests/scripts/task_python_docs.sh",
           label: 'Build TIRx API documentation',
         )
         ci.upload_artifacts('docs', '--path docs.tgz')
