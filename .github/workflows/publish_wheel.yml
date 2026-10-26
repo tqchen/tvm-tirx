@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
         with:
-          ref: 1f16830e
+          ref: 1f16830ef6a4b07e16bedfebae305b244ce58200
       - uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
@@ -71,7 +71,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           python -I -c "import importlib.util; assert importlib.util.find_spec('tvm') is None"
-          python -I -m pytest -vvs "$GITHUB_WORKSPACE/tests/python/runtime/test_validate_wheel_library.py" "$GITHUB_WORKSPACE/tests/python/runtime/test_tensor.py" "$GITHUB_WORKSPACE/tests/python/ir/test_type.py" "$GITHUB_WORKSPACE/tests/python/sym/test_z3.py" "$GITHUB_WORKSPACE/tests/python/script/test_ir_builder.py" "$GITHUB_WORKSPACE/tests/python/codegen/llvm/test_basic.py::test_llvm_vadd_pipeline" "$GITHUB_WORKSPACE/tests/python/codegen/gpu_common/test_allreduce.py::test_allreduce_sum_compile"
+          python -I -m pytest -vvs "$GITHUB_WORKSPACE/tests/python/runtime/test_validate_wheel_library.py" "$GITHUB_WORKSPACE/tests/python/runtime/test_tensor.py" "$GITHUB_WORKSPACE/tests/python/ir/test_type.py" "$GITHUB_WORKSPACE/tests/python/sym/test_z3.py" "$GITHUB_WORKSPACE/tests/python/script/test_ir_builder.py" "$GITHUB_WORKSPACE/tests/python/codegen/llvm/test_basic.py::test_llvm_vadd_pipeline" "$GITHUB_WORKSPACE/tests/python/codegen/gpu_common/test_allreduce.py::test_allreduce_sum_compile" "$GITHUB_WORKSPACE/tests/python/tirx/codegen/test_cuda.py::test_typed_buffer_bindings" "$GITHUB_WORKSPACE/tests/python/tirx/codegen/test_cuda.py::test_vector_pointer_preserves_packed_offset"
       - name: Load CUDA sidecar without a GPU execution claim
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         shell: bash
