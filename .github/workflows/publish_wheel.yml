@@ -65,6 +65,7 @@ jobs:
           python -m pip install wheel
           python -m wheel unpack --dest artifacts/unpacked artifacts/core/*.whl
           python -c "from pathlib import Path; import shutil; root = next(Path('artifacts/unpacked').iterdir()); shutil.copyfile('python/tvm_tirx/base.py', root / 'tvm_tirx/base.py')"
+          mkdir -p artifacts/patched_core
           python -m wheel pack --dest-dir artifacts/patched_core artifacts/unpacked/*
       - name: Install core with native ORCJIT dependency
         id: install
