@@ -15,106 +15,76 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Build Windows ARM64 validation artifacts
-
+name: Validate retained Windows ARM64 wheels
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Tag, branch, or SHA to build"
+      orcjit_run:
+        description: "Native ORCJIT artifact run"
         required: true
         type: string
-      publish_repository:
-        description: "Where to publish after the wheel build succeeds"
-        required: true
-        default: "none"
-        type: choice
-        options:
-          - none
-          - pypi
-
 permissions:
   contents: read
-
-# CI runners are ephemeral, so pip's HTTP cache buys nothing and a stale
-# preinstalled cache (e.g. on the macOS image) only produces noisy
-# "Cache entry deserialization failed" warnings. Disable it everywhere.
-env:
-  PIP_NO_CACHE_DIR: "1"
-
+  actions: read
 jobs:
-  build_wheels:
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+  validate:
+    runs-on: windows-11-arm
     env:
-      CIBW_TEST_SKIP: "*"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: "Windows ARM64 wheel with CUDA runtime"
-            os: windows-11-arm
-            arch: ARM64
-            build: cp312-win_arm64
-            include_cuda_runtime: "1"
-            artifact_suffix: windows-arm64
+      TVM_WHEEL_EXPECT_LLVM: "1"
+      TVM_WHEEL_EXPECT_CUDA_RUNTIME: "1"
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.2
         with:
-          ref: ${{ inputs.tag }}
-          submodules: recursive
-          # Preserve the source history and tags for reproducible release builds.
-          fetch-depth: 0
-          fetch-tags: true
-
-      # Land the sidecar where -DTVM_TIRX_PACKAGE_EXTRA_LIBS / cibuildwheel's /project
-      # mount expects it. Skipped on CPU-only rows (macOS).
-      - name: Download CUDA runtime sidecar
-        if: ${{ matrix.include_cuda_runtime == '1' }}
-        uses: actions/download-artifact@v8.0.1
+          ref: 1f16830e
+      - uses: actions/setup-python@v6.2.0
         with:
-          name: tirx-cuda-runtime-${{ matrix.arch }}
-          path: build-wheel-cuda/lib
-          run-id: 40253584181
+          python-version: "3.12"
+          architecture: arm64
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: tirx-wheel-windows-arm64
+          path: artifacts/core
+          run-id: 40257875533
           github-token: ${{ github.token }}
-
-      - name: Build and test native and LLVM targets wheels
-        uses: ./.github/actions/build-wheel-for-publish
+      - uses: actions/download-artifact@v8.0.1
         with:
-          arch: ${{ matrix.arch }}
-          build: ${{ matrix.build }}
-          cmake_defines: ${{ matrix.cmake_defines }}
-          include_cuda_runtime: ${{ matrix.include_cuda_runtime }}
-
-      - name: Report wheel sizes
+          name: tirx-llvm-targets-wheel-windows-arm64
+          path: artifacts/optional
+          run-id: 40257875533
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: cibw-orcjit-wheels-windows-11-arm-ARM64-0
+          path: artifacts/orcjit
+          repository: tqchen/tvm-ffi
+          run-id: ${{ inputs.orcjit_run }}
+          github-token: ${{ github.token }}
+      - name: Install core with native ORCJIT dependency
+        id: install
         shell: bash
         run: |
-          python - <<'PYTHON'
-          import os
-          from pathlib import Path
-
-          lines = ["| Package | Wheel | Bytes | MiB |", "|---|---|---:|---:|"]
-          for package, directory in [("Main", "wheelhouse"), ("LLVM targets", "wheelhouse-llvm-targets")]:
-              for wheel in sorted(Path(directory).glob("*.whl")):
-                  size = wheel.stat().st_size
-                  lines.append(f"| {package} | {wheel.name} | {size:,} | {size / 2**20:.2f} |")
-          summary = "\n".join(lines) + "\n"
-          print(summary)
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
-              output.write(summary)
-          PYTHON
-
-      - name: Upload wheel artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: tirx-wheel-${{ matrix.artifact_suffix }}
-          path: wheelhouse/*.whl
-          if-no-files-found: error
-
-      - name: Upload LLVM targets wheel artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: tirx-llvm-targets-wheel-${{ matrix.artifact_suffix }}
-          path: wheelhouse-llvm-targets/*.whl
-          if-no-files-found: error
+          python -m pip install pytest numpy apache-tvm-ffi==0.1.15.post1 artifacts/orcjit/*.whl artifacts/core/*.whl
+          python -m pip check
+          python -m pip freeze
+      - name: Validate core wheel and CPU JIT
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          python -I -c "import importlib.util; assert importlib.util.find_spec('tvm') is None"
+          python -I -m pytest -vvs "$GITHUB_WORKSPACE/tests/python/runtime/test_validate_wheel_library.py" "$GITHUB_WORKSPACE/tests/python/runtime/test_tensor.py" "$GITHUB_WORKSPACE/tests/python/ir/test_type.py" "$GITHUB_WORKSPACE/tests/python/sym/test_z3.py" "$GITHUB_WORKSPACE/tests/python/script/test_ir_builder.py" "$GITHUB_WORKSPACE/tests/python/codegen/llvm/test_basic.py::test_llvm_vadd_pipeline" "$GITHUB_WORKSPACE/tests/python/codegen/gpu_common/test_allreduce.py::test_allreduce_sum_compile"
+      - name: Load CUDA sidecar without a GPU execution claim
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          python -I -c "import tvm_tirx; from tvm_ffi.libinfo import load_lib_ctypes; handle = load_lib_ctypes('tvm_tirx', 'tvm_runtime_cuda', 'RTLD_LOCAL'); print(handle._name)"
+      - name: Install optional targets wheel and validate selection
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          python -m pip install artifacts/optional/*.whl
+          python -m pip check
+          wheel=$(cygpath -m "$(pwd)/$(echo artifacts/optional/*.whl)")
+          cd "$RUNNER_TEMP"
+          python -I "$GITHUB_WORKSPACE/ci/wheel/check_llvm_targets_wheel.py" --wheel "$wheel"
+          python -I -m pytest -vvs "$GITHUB_WORKSPACE/tests/python/codegen/llvm/test_basic.py::test_llvm_vadd_pipeline"
