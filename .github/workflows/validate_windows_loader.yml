@@ -1,0 +1,81 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Validate Windows AMD64 wheel loading
+on:
+  push:
+    branches: [validation/windows-amd64-loader]
+permissions:
+  contents: read
+env:
+  PIP_NO_CACHE_DIR: "1"
+jobs:
+  sidecar:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.10"
+          architecture: x64
+      - name: Build CUDA runtime sidecar
+        shell: cmd
+        run: call ci/wheel/windows_build_libtvm_runtime_cuda.bat AMD64
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: cuda-runtime-amd64
+          path: build-wheel-cuda/lib/tvm_runtime_cuda.dll
+          if-no-files-found: error
+  wheels:
+    needs: sidecar
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: cuda-runtime-amd64
+          path: build-wheel-cuda/lib
+      - name: Build and test native and LLVM targets wheels
+        uses: ./.github/actions/build-wheel-for-publish
+        with:
+          arch: AMD64
+          build: cp310-win_amd64
+          include_cuda_runtime: "1"
+      - name: Verify optional package initialization in fresh processes
+        shell: pwsh
+        run: |
+          python -m venv loader-check
+          $python = Join-Path $PWD 'loader-check/Scripts/python.exe'
+          $wheels = @(Get-ChildItem wheelhouse/*.whl; Get-ChildItem wheelhouse-llvm-targets/*.whl)
+          & $python -m pip install $wheels.FullName
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $python -I ci/wheel/check_windows_loader_initialization.py
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v7.0.1
+        if: always()
+        with:
+          name: windows-amd64-wheels
+          path: |
+            wheelhouse/*.whl
+            wheelhouse-llvm-targets/*.whl
+          if-no-files-found: warn
