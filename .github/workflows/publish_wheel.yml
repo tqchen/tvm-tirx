@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
         with:
-          ref: 1f16830ef6a4b07e16bedfebae305b244ce58200
+          ref: 626693eeabff4b4fe4bd3efd9534de8c7b18418e
       - uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
@@ -59,11 +59,18 @@ jobs:
           repository: tqchen/tvm-ffi
           run-id: ${{ inputs.orcjit_run }}
           github-token: ${{ github.token }}
+      - name: Apply Python loader correction to retained core wheel
+        shell: bash
+        run: |
+          python -m pip install wheel
+          python -m wheel unpack --dest artifacts/unpacked artifacts/core/*.whl
+          python -c "from pathlib import Path; import shutil; root = next(Path('artifacts/unpacked').iterdir()); shutil.copyfile('python/tvm_tirx/base.py', root / 'tvm_tirx/base.py')"
+          python -m wheel pack --dest-dir artifacts/patched_core artifacts/unpacked/*
       - name: Install core with native ORCJIT dependency
         id: install
         shell: bash
         run: |
-          python -m pip install pytest numpy apache-tvm-ffi==0.1.15.post1 artifacts/orcjit/*.whl artifacts/core/*.whl
+          python -m pip install pytest numpy apache-tvm-ffi==0.1.15.post1 artifacts/orcjit/*.whl artifacts/patched_core/*.whl
           python -m pip check
           python -m pip freeze
       - name: Validate core wheel and CPU JIT
@@ -77,7 +84,7 @@ jobs:
         shell: bash
         run: |
           cd "$RUNNER_TEMP"
-          python -I -c "import tvm_tirx; from tvm_ffi.libinfo import load_lib_ctypes; handle = load_lib_ctypes('tvm_tirx', 'tvm_runtime_cuda', 'RTLD_LOCAL'); print(handle._name)"
+          python -I -c "import tvm_tirx; from tvm_ffi.libinfo import load_lib_ctypes; handle = load_lib_ctypes('tvm_tirx', 'tvm_runtime_cuda', 'RTLD_LOCAL', extra_lib_paths=tvm_tirx.libinfo.package_lib_paths()); print(handle._name)"
       - name: Install optional targets wheel and validate selection
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         shell: bash
@@ -88,3 +95,10 @@ jobs:
           cd "$RUNNER_TEMP"
           python -I "$GITHUB_WORKSPACE/ci/wheel/check_llvm_targets_wheel.py" --wheel "$wheel"
           python -I -m pytest -vvs "$GITHUB_WORKSPACE/tests/python/codegen/llvm/test_basic.py::test_llvm_vadd_pipeline"
+      - name: Report corrected wheel hash
+        shell: bash
+        run: python -c "from pathlib import Path; import hashlib; p = next(Path('artifacts/patched_core').glob('*.whl')); print(p.name, hashlib.sha256(p.read_bytes()).hexdigest())"
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: tirx-wheel-windows-arm64-validated
+          path: artifacts/patched_core/*.whl
