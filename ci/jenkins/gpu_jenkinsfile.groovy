@@ -34,7 +34,6 @@ stage('Build') {
     withEnv(ci.build_environment()) {
       sh(
         script: """${docker_run} --no-gpu ${images.ci_gpu} bash -euo pipefail -c '
-          sudo dnf -y install cuda-driver-devel-13-1
           source ./tests/scripts/task_install_build_dependencies.sh
           ./tests/scripts/task_build_gpu.sh
         '""",
@@ -65,7 +64,6 @@ parallel(
         ci.download_artifacts('gpu')
         sh(
           script: """${docker_run} ${images.ci_gpu} bash -euo pipefail -c '
-            sudo dnf -y install cuda-driver-devel-13-1
             export LIBRARY_PATH=/usr/local/cuda/lib64/stubs
             source ./tests/scripts/test_task_install_dist_wheels.sh --group cuda
             ./tests/scripts/task_python_unittest_gpuonly.sh
