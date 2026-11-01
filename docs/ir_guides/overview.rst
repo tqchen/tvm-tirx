@@ -27,9 +27,12 @@ TIRx represents a program as a tree of intermediate representation (IR)
 nodes, such as functions, statements, and values. The tree is similar to the
 abstract syntax tree (AST) of Python code, but in a more structured, typed
 form. A compiler pipeline analyzes and transforms this tree step by step
-to produce target code. The ``tvm_tirx.script`` interfaces print the IR as
-TVMScript, a Python-based notation for tensor programs. For example, this
-TVMScript definition describes an add-one computation on a GPU:
+to produce target code. IR objects are immutable: an analysis reads the
+tree, and a transformation builds a new tree instead of modifying the
+existing one, sharing the parts that did not change. The
+``tvm_tirx.script`` interfaces print the IR as TVMScript, a Python-based
+notation for tensor programs. For example, this TVMScript definition
+describes an add-one computation on a GPU:
 
 .. literalinclude:: ../../examples/quick_start/add_one_cuda.py
    :language: python
