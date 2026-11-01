@@ -15,8 +15,8 @@
     specific language governing permissions and limitations
     under the License.
 
-Traversing and Transforming IR
-==============================
+Structural Utilities
+====================
 
 Compiler passes often need to find variable uses, check a property of a
 subtree, or rewrite an expression. TVM FFI's structural operations follow
