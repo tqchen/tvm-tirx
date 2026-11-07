@@ -458,6 +458,36 @@ enum class ForKind : int {
   kUnrolled = 3,
 };
 
+namespace ffi {
+// Bindings such as Rust read ForObj::kind as a closed enum, so every integer that becomes a
+// ForKind (typed arguments, reflection setters, deserialization) must name one of its values.
+template <>
+struct TypeTraits<ForKind> : public TypeTraitsIntBase<ForKind> {
+  TVM_FFI_INLINE static void CopyToAnyView(const ForKind& src, TVMFFIAny* result) {
+    CopyInt64ToAnyView(static_cast<int64_t>(src), result);
+  }
+  TVM_FFI_INLINE static void MoveToAny(ForKind src, TVMFFIAny* result) {
+    CopyToAnyView(src, result);
+  }
+  static ForKind CopyFromAnyViewAfterCheck(const TVMFFIAny* src) { return FromInt(src->v_int64); }
+  static ForKind MoveFromAnyAfterCheck(TVMFFIAny* src) { return FromInt(src->v_int64); }
+  static std::optional<ForKind> TryCastFromAnyView(const TVMFFIAny* src) {
+    std::optional<int64_t> value = TypeTraits<int64_t>::TryCastFromAnyView(src);
+    if (!value.has_value()) return std::nullopt;
+    return FromInt(*value);
+  }
+
+ private:
+  static ForKind FromInt(int64_t value) {
+    if (value < static_cast<int64_t>(ForKind::kDefault) ||
+        value > static_cast<int64_t>(ForKind::kUnrolled)) {
+      TVM_FFI_THROW(ValueError) << "Invalid ForKind value " << value;
+    }
+    return static_cast<ForKind>(value);
+  }
+};
+}  // namespace ffi
+
 /*!
  * \brief A for loop, with possible type annotations.
  *
