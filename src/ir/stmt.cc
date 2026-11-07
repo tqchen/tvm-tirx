@@ -849,9 +849,10 @@ TVM_FFI_STATIC_INIT_BLOCK() {
             ffi::FStructuralMutate::FromNative<&ForMaybeInplaceMutate>());
 
   refl::GlobalDef().def(
-      "ir.For", [](PrimVar var, PrimExpr begin, PrimExpr end, PrimExpr step, int kind, SeqStmt body,
-                   ffi::Optional<ffi::Map<ffi::String, Any>> annotations, Location loc) {
-        return For(var, begin, end, step, static_cast<ForKind>(kind), body,
+      "ir.For",
+      [](PrimVar var, PrimExpr begin, PrimExpr end, PrimExpr step, ForKind kind, SeqStmt body,
+         ffi::Optional<ffi::Map<ffi::String, Any>> annotations, Location loc) {
+        return For(var, begin, end, step, kind, body,
                    annotations.value_or(ffi::Map<ffi::String, Any>()), loc);
       });
 }
