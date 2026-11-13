@@ -29,6 +29,11 @@ on:
         required: false
         default: ""
         type: string
+      tvm_ffi_version:
+        description: "tvm-ffi release to depend on (empty: the release tag of the 3rdparty/tvm-ffi commit)"
+        required: false
+        default: ""
+        type: string
       publish_repository:
         description: "Where to publish after the crate is verified"
         required: true
@@ -59,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.source.outputs.sha }}
-      tvm_ffi_version: ${{ steps.ffi.outputs.version }}
+      tvm_ffi_version: ${{ inputs.tvm_ffi_version || steps.ffi.outputs.version }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v6.0.2
@@ -82,12 +87,13 @@ jobs:
       # Resolve the registry version from the source gitlink, not the placeholder in its crate.
       - id: ffi
         name: Check the tvm-ffi release
+        if: ${{ inputs.tvm_ffi_version == '' }}
         uses: ./.github/actions/detect-tvm-ffi-version
 
       - name: Prepare matching release metadata
         shell: bash
         env:
-          TVM_FFI_VERSION: ${{ steps.ffi.outputs.version }}
+          TVM_FFI_VERSION: ${{ inputs.tvm_ffi_version || steps.ffi.outputs.version }}
         run: &prepare_release_metadata |
           uv pip install tomlkit setuptools-scm
           python ci/wheel/prepare_release_metadata.py --crate-version-from-tag "$RELEASE_TAG"
